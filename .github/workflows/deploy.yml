@@ -31,7 +31,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Web
-        run: flutter build web --release --base-href /plantoes_ret/
+        run: flutter build web --release --base-href /plantoes-ret-web/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
