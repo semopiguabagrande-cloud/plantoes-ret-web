@@ -1283,10 +1283,32 @@ class _HomeScreenState extends State<HomeScreen>
                           _secaoConfirmados(),
                         ],
 
-                        if (meusDias.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _secaoPendentes(),
-                        ],
+                       const SizedBox(height: 12),
+if (meusDias.isNotEmpty)
+  _secaoPendentes()
+else
+  const Card(
+    color: Colors.white10,
+    child: Padding(
+      padding: EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Icon(
+            Icons.touch_app,
+            color: Colors.amberAccent,
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Selecione os dias desejados. '
+              'Eles aparecerão aqui como "A confirmar".',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+        ],
+      ),
+    ),
+  ),
 
                         const SizedBox(height: 22),
 
