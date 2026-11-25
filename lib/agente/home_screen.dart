@@ -194,6 +194,33 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  void _mostrarAvisoLimite({
+    required String titulo,
+  }) {
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.info_outline_rounded,
+          color: Colors.orange,
+          size: 34,
+        ),
+        title: Text(
+          titulo,
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('ENTENDI'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _mostrarSucesso(String texto) {
     if (!mounted) return;
 
@@ -581,16 +608,24 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
 
+    // Segunda barreira no aplicativo: não permite selecionar uma vaga
+    // que já aparece esgotada. O servidor continua sendo a validação final.
+    final vagaDisponivel = _vagaDoDia(data);
+    if (vagaDisponivel == null ||
+        _restantesDoTurno(vagaDisponivel, turno) <= 0) {
+      _mostrarAvisoLimite(
+        titulo: 'Não foi possível selecionar esta vaga.',
+      );
+      carregarTudo(silencioso: true);
+      return;
+    }
+
     final jaTemNoDia =
         meusDias.any((item) => item['data'] == data);
 
     if (!jaTemNoDia && totalEscolhido >= limitePlantao) {
-      _mostrarErro(
-        'Você já atingiu o limite de $limitePlantao '
-        'plantões neste mês.\n\n'
-        'Para escolher outro dia, cancele um já '
-        'confirmado (X no chip verde) ou desmarque '
-        'um da lista "A confirmar".',
+      _mostrarAvisoLimite(
+        titulo: 'Limite mensal de plantões atingido.',
       );
       return;
     }
@@ -610,6 +645,8 @@ class _HomeScreenState extends State<HomeScreen>
   // ===================================================
 
   Future<void> confirmarPlantao() async {
+    if (enviando) return;
+
     if (meusDias.isEmpty) {
       _mostrarErro('Selecione ao menos um plantão.');
       return;
@@ -673,10 +710,31 @@ class _HomeScreenState extends State<HomeScreen>
           });
         }
 
-        _mostrarErro(
-          resposta['mensagem']?.toString() ??
-              'Não foi possível salvar a inscrição.',
-        );
+        final tipoLimite =
+            (resposta['tipoLimite'] ?? '').toString().toUpperCase();
+
+        if (tipoLimite == 'AGENTE') {
+          _mostrarAvisoLimite(
+            titulo: 'Limite mensal de plantões atingido.',
+          );
+        } else if (tipoLimite == 'DIA') {
+          _mostrarAvisoLimite(
+            titulo: 'Todas as vagas deste dia foram preenchidas.',
+          );
+        } else if (tipoLimite == 'TURNO') {
+          final turnoLimite =
+              (resposta['turno'] ?? '').toString().toUpperCase();
+          _mostrarAvisoLimite(
+            titulo: turnoLimite == 'NOITE'
+                ? 'Vagas do período noturno esgotadas.'
+                : 'Vagas do período diurno esgotadas.',
+          );
+        } else {
+          _mostrarErro(
+            resposta['mensagem']?.toString() ??
+                'Não foi possível salvar a inscrição.',
+          );
+        }
 
         // Recarrega as vagas e RECONCILIA (desmarca o que
         // ficou sem vaga — inclusive sem o campo "data").
